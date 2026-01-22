@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>13-Month Solstice Calendar</title>
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 1rem;
+  background: #fafafa;
+}
+
+h1 {
+  text-align: center;
+}
+
+.month {
+  margin-bottom: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.header {
+  font-weight: bold;
+  text-align: center;
+}
+
+.day {
+  background: white;
+  border: 1px solid #ccc;
+  padding: 4px;
+  font-size: 0.8rem;
+  min-height: 70px;
+}
+
+.note {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: #444;
+}
+
+.feriae {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #eee;
+}
+
+.feriae-day {
+  margin-bottom: 0.5rem;
+}
+</style>
+</head>
+
+<body>
+<h1>13-Month Solstice Calendar</h1>
+
+<div id="calendar"></div>
+
+<script>
+/* ===== CONSTANTS ===== */
+
+const WEEKDAYS = ["Lunae","Mars","Mercur","Jupiter","Venus","Saturn","Sol"];
+
+const MONTHS = [
+  "Gerar","Făurar","Mărțișor","Prier","Florar","Cireșar",
+  "Cuptoraș","Cuptor","Gustar","Răpciune",
+  "Brumărel","Br

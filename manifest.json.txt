@@ -1,0 +1,8 @@
+{
+  "name": "13-Month Solstice Calendar",
+  "short_name": "SolsticeCal",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa"
+}
