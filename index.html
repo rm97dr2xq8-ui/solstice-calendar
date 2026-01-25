@@ -1,180 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
 <title>13-Month Solstice Calendar</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.json">
 
 <style>
 body {
   font-family: system-ui, -apple-system, sans-serif;
-  margin: 1rem;
-  background: #fafafa;
+  margin: 0;
+  padding: 1rem;
+  background: #f6f6f6;
 }
-
 h1 {
   text-align: center;
 }
-
-.month {
-  margin-bottom: 2rem;
+.controls {
+  text-align: center;
+  margin-bottom: 0.5rem;
 }
-
-.grid {
+select {
+  font-size: 1rem;
+  padding: 0.3rem;
+}
+.weekdays, .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.header {
-  font-weight: bold;
   text-align: center;
 }
-
+.weekdays div {
+  font-weight: bold;
+  padding: 0.3rem 0;
+}
+.calendar {
+  gap: 4px;
+}
 .day {
   background: white;
-  border: 1px solid #ccc;
-  padding: 4px;
-  font-size: 0.8rem;
-  min-height: 70px;
+  border-radius: 6px;
+  padding: 6px;
+  min-height: 80px;
+  cursor: pointer;
 }
-
+.num {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.greg {
+  font-size: 0.75rem;
+  color: #666;
+}
 .note {
-  margin-top: 4px;
-  font-size: 0.7rem;
-  color: #444;
+  font-size: 0.75rem;
 }
-
-.feriae {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #eee;
+.footer {
+  text-align: center;
+  margin-top: 0.8rem;
+  font-style: italic;
 }
-
-.feriae-day {
-  margin-bottom: 0.5rem;
+.legend {
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
 }
 </style>
 </head>
 
 <body>
+
 <h1>13-Month Solstice Calendar</h1>
 
-<div id="calendar"></div>
+<div class="controls">
+  Year:
+  <select id="yearSelect"></select>
+  Month:
+  <select id="monthSelect"></select>
+</div>
+
+<div class="weekdays">
+  <div>Lunae</div><div>Mars</div><div>Mercur</div>
+  <div>Jupiter</div><div>Venus</div><div>Saturn</div><div>Sol</div>
+</div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="legend">
+🌑 New · 🌒 Waxing · 🌓 First · 🌔 Waxing Gibbous · 🌕 Full · 🌖 Waning · 🌗 Last · 🌘 Waning
+</div>
+
+<div class="footer" id="feriae"></div>
 
 <script>
-/* ===== CONSTANTS ===== */
-
-const WEEKDAYS = ["Lunae","Mars","Mercur","Jupiter","Venus","Saturn","Sol"];
-
-const MONTHS = [
+// =====================
+// CONSTANTS
+// =====================
+const months = [
   "Gerar","Făurar","Mărțișor","Prier","Florar","Cireșar",
   "Cuptoraș","Cuptor","Gustar","Răpciune",
   "Brumărel","Brumar","Ghețar"
 ];
 
-const DAYS_IN_MONTH = 28;
+// =====================
+// SOLSTICE CALCULATION
+// =====================
+function winterSolsticeUTC(year) {
+  const Y = (year - 2000) / 1000;
+  const JDE =
+    2451900.05952 +
+    365242.74049 * Y -
+    0.06223 * Y * Y -
+    0.00823 * Y * Y * Y +
+    0.00032 * Y * Y * Y * Y;
 
-// Winter Solstice 2025 (anchor)
-const ANCHOR_DATE = new Date(Date.UTC(2025,11,21));
+  return new Date((JDE - 2440587.5) * 86400000);
+}
 
-/* ===== HELPERS ===== */
+// =====================
+// MOON PHASE
+// =====================
+function moonPhase(date) {
+  const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14);
+  const synodic = 29.530588853;
+  const days = (date.getTime() - knownNewMoon) / 86400000;
+  const phase = ((days % synodic) + synodic) % synodic;
 
-function isLeapYear(y) {
+  if (phase < 1.85) return "🌑";
+  if (phase < 5.54) return "🌒";
+  if (phase < 9.23) return "🌓";
+  if (phase < 12.92) return "🌔";
+  if (phase < 16.61) return "🌕";
+  if (phase < 20.30) return "🌖";
+  if (phase < 23.99) return "🌗";
+  if (phase < 27.68) return "🌘";
+  return "🌑";
+}
+
+// =====================
+// NOTES
+// =====================
+function noteKey(y, m, d) {
+  return `note-${y}-${m}-${d}`;
+}
+
+// =====================
+// UI SETUP
+// =====================
+const yearSelect = document.getElementById("yearSelect");
+const monthSelect = document.getElementById("monthSelect");
+const calendar = document.getElementById("calendar");
+const feriae = document.getElementById("feriae");
+
+for (let y = 2020; y <= 2040; y++) {
+  yearSelect.add(new Option(y, y));
+}
+months.forEach((m, i) => monthSelect.add(new Option(m, i)));
+
+yearSelect.value = new Date().getFullYear();
+monthSelect.value = 0;
+
+// =====================
+// RENDER
+// =====================
+function isLeap(y) {
   return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
 }
 
-function iso(d) {
-  return d.toISOString().split("T")[0];
-}
+function render() {
+  calendar.innerHTML = "";
+  feriae.textContent = "";
 
-function seasonalMarkers(year) {
-  return {
-    "Winter Solstice": iso(new Date(Date.UTC(year,11,21))),
-    "Spring Equinox": iso(new Date(Date.UTC(year,2,20))),
-    "Summer Solstice": iso(new Date(Date.UTC(year,5,21))),
-    "Autumn Equinox": iso(new Date(Date.UTC(year,8,22)))
-  };
-}
+  const year = +yearSelect.value;
+  const monthIndex = +monthSelect.value;
+  const solstice = winterSolsticeUTC(year);
 
-/* ===== MAIN GENERATOR ===== */
+  for (let d = 0; d < 28; d++) {
+    const g = new Date(solstice);
+    g.setUTCDate(solstice.getUTCDate() + monthIndex * 28 + d);
 
-function generateCalendar(year) {
-  const cal = document.getElementById("calendar");
-  cal.innerHTML = "";
+    const key = noteKey(year, monthIndex, d + 1);
+    const saved = localStorage.getItem(key);
+    const phase = moonPhase(g);
 
-  let current = new Date(ANCHOR_DATE);
-  current.setUTCDate(current.getUTCDate() + (year - 2025) * 365);
+    const cell = document.createElement("div");
+    cell.className = "day";
+    cell.innerHTML = `
+      <div class="num">${d + 1}</div>
+      <div class="greg">${g.toDateString()}</div>
+      <div>${phase}</div>
+      <div class="note">${saved ? "📝" : ""}</div>
+    `;
 
-  const markers = seasonalMarkers(year);
+    cell.onclick = () => {
+      const note = prompt(
+        `Note for ${months[monthIndex]} ${d + 1}`,
+        saved || ""
+      );
+      if (note === null) return;
+      if (note.trim()) localStorage.setItem(key, note);
+      else localStorage.removeItem(key);
+      render();
+    };
 
-  for (const month of MONTHS) {
-    const m = document.createElement("div");
-    m.className = "month";
-
-    const h = document.createElement("h2");
-    h.textContent = month;
-    m.appendChild(h);
-
-    const g = document.createElement("div");
-    g.className = "grid";
-
-    WEEKDAYS.forEach(d => {
-      const hd = document.createElement("div");
-      hd.className = "header";
-      hd.textContent = d;
-      g.appendChild(hd);
-    });
-
-    for (let day = 1; day <= DAYS_IN_MONTH; day++) {
-      const cell = document.createElement("div");
-      cell.className = "day";
-
-      const greg = iso(current);
-      let note = "";
-
-      for (const k in markers) {
-        if (markers[k] === greg) note = k;
-      }
-
-      cell.innerHTML = `
-        <strong>${day}</strong><br>
-        <small>${WEEKDAYS[(day-1)%7]}</small><br>
-        <small>${greg}</small>
-        ${note ? `<div class="note">${note}</div>` : ""}
-      `;
-
-      g.appendChild(cell);
-      current.setUTCDate(current.getUTCDate()+1);
-    }
-
-    m.appendChild(g);
-    cal.appendChild(m);
+    calendar.appendChild(cell);
   }
 
-  // Feriae
-  const f = document.createElement("div");
-  f.className = "feriae";
-
-  const fh = document.createElement("h2");
-  fh.textContent = "Feriae";
-  f.appendChild(fh);
-
-  const count = isLeapYear(year) ? 2 : 1;
-  for (let i=1;i<=count;i++) {
-    const d = document.createElement("div");
-    d.className = "feriae-day";
-    d.innerHTML = `<strong>Feriae ${i}</strong> — ${iso(current)}`;
-    current.setUTCDate(current.getUTCDate()+1);
-    f.appendChild(d);
-  }
-
-  cal.appendChild(f);
+  feriae.textContent =
+    "Feriae: " + (isLeap(year) ? "2 days" : "1 day") + " outside time";
 }
 
-generateCalendar(2025);
+yearSelect.onchange = render;
+monthSelect.onchange = render;
+render();
+
+// =====================
+// SERVICE WORKER
+// =====================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
 </script>
+
 </body>
 </html>
+
+
+
