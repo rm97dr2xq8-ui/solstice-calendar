@@ -72,4 +72,109 @@ const WEEKDAYS = ["Lunae","Mars","Mercur","Jupiter","Venus","Saturn","Sol"];
 const MONTHS = [
   "Gerar","Făurar","Mărțișor","Prier","Florar","Cireșar",
   "Cuptoraș","Cuptor","Gustar","Răpciune",
-  "Brumărel","Br
+  "Brumărel","Brumar","Ghețar"
+];
+
+const DAYS_IN_MONTH = 28;
+
+// Winter Solstice 2025 (anchor)
+const ANCHOR_DATE = new Date(Date.UTC(2025,11,21));
+
+/* ===== HELPERS ===== */
+
+function isLeapYear(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+}
+
+function iso(d) {
+  return d.toISOString().split("T")[0];
+}
+
+function seasonalMarkers(year) {
+  return {
+    "Winter Solstice": iso(new Date(Date.UTC(year,11,21))),
+    "Spring Equinox": iso(new Date(Date.UTC(year,2,20))),
+    "Summer Solstice": iso(new Date(Date.UTC(year,5,21))),
+    "Autumn Equinox": iso(new Date(Date.UTC(year,8,22)))
+  };
+}
+
+/* ===== MAIN GENERATOR ===== */
+
+function generateCalendar(year) {
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+
+  let current = new Date(ANCHOR_DATE);
+  current.setUTCDate(current.getUTCDate() + (year - 2025) * 365);
+
+  const markers = seasonalMarkers(year);
+
+  for (const month of MONTHS) {
+    const m = document.createElement("div");
+    m.className = "month";
+
+    const h = document.createElement("h2");
+    h.textContent = month;
+    m.appendChild(h);
+
+    const g = document.createElement("div");
+    g.className = "grid";
+
+    WEEKDAYS.forEach(d => {
+      const hd = document.createElement("div");
+      hd.className = "header";
+      hd.textContent = d;
+      g.appendChild(hd);
+    });
+
+    for (let day = 1; day <= DAYS_IN_MONTH; day++) {
+      const cell = document.createElement("div");
+      cell.className = "day";
+
+      const greg = iso(current);
+      let note = "";
+
+      for (const k in markers) {
+        if (markers[k] === greg) note = k;
+      }
+
+      cell.innerHTML = `
+        <strong>${day}</strong><br>
+        <small>${WEEKDAYS[(day-1)%7]}</small><br>
+        <small>${greg}</small>
+        ${note ? `<div class="note">${note}</div>` : ""}
+      `;
+
+      g.appendChild(cell);
+      current.setUTCDate(current.getUTCDate()+1);
+    }
+
+    m.appendChild(g);
+    cal.appendChild(m);
+  }
+
+  // Feriae
+  const f = document.createElement("div");
+  f.className = "feriae";
+
+  const fh = document.createElement("h2");
+  fh.textContent = "Feriae";
+  f.appendChild(fh);
+
+  const count = isLeapYear(year) ? 2 : 1;
+  for (let i=1;i<=count;i++) {
+    const d = document.createElement("div");
+    d.className = "feriae-day";
+    d.innerHTML = `<strong>Feriae ${i}</strong> — ${iso(current)}`;
+    current.setUTCDate(current.getUTCDate()+1);
+    f.appendChild(d);
+  }
+
+  cal.appendChild(f);
+}
+
+generateCalendar(2025);
+</script>
+</body>
+</html>
